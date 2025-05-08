@@ -1,4 +1,6 @@
+
 /* Wetterstationen Euregio Beispiel */
+// https://mapicons.mapsmarker.com/markers/media/photo/?custom_color=ffffff Icons
 
 // Innsbruck
 let ibk = {
@@ -12,8 +14,9 @@ let map = L.map("map").setView([ibk.lat, ibk.lng], ibk.zoom);
 
 // thematische Layer
 let overlays = {
-    stations: L.featureGroup().addTo(map),
-    temperatur: L.featureGroup(),
+    stations: L.featureGroup(),
+    temperatur: L.featureGroup().addTo(map),
+
 }
 
 // Layer control
@@ -42,44 +45,54 @@ async function loadStations(url) {
 
     // Wetterstationen mit Icons und Popups
     L.geoJSON(jsondata, {
-        pointToLayer: function (feature, latlng) {  
-                return L.marker(latlng, {
-                    icon: L.icon({
-                        iconUrl: "icons/wifi.png",
-                        iconAnchor: [16, 37],
-                        popupAnchor: [0, -37]
-                     })
-                });
-            },
-
-            onEachFeature: function(feature, layer) {
-                let pointInTime = new Date(feature.properties.date);
-                //console.log(pointInTime);
-                layer.bindPopup(`
-                   <h4>${feature.properties.name} (${feature.geometry.coordinates[2]}m)</h4>
-                   <ul>
-                   <li>Lufttemperatur (c) ${feature.properties.LT !== undefined ? feature.properties.LT : "-"}</li>
-                   <li>Realtive Luftfeuchte (%) ${feature.properties.RH || "-"}</li>
-                   <li>Windgeschwindigkeit (km/h) ${feature.properties.WG || "-"}</li>
-                   <li>Schneehöhe (cm) ${feature.properties.HS || "-"}</li>
-                   </ul>
-                   <span>${pointInTime.toLocaleString()}</span>
-                `);
-            }
-    }).addTo(overlays.stations);
-    showTemperature(jsondata); 
-}
-loadStations("https://static.avalanche.report/weather_stations/stations.geojson");
-
-function showTemperature(jsondata) {
-    L.geoJSON(jsondata, {
         pointToLayer: function (feature, latlng) {
             return L.marker(latlng, {
-                icon: L.divIcon({
+                icon: L.icon({
+                    iconUrl: "icons/wifi.png",
+                    iconAnchor: [16, 37],
+                    popupAnchor: [0, -37]
+                })
+            });
+        },
+        onEachFeature: function (feature, layer) {
+            let pointInTime = new Date(feature.properties.date);
+            //console.log(pointInTime)
+            layer.bindPopup(`
+                <h4>${feature.properties.name} (${feature.geometry.coordinates[2]}m)</h4>
+                <ul>
+                    <li>Lufttemperatur (°C) ${feature.properties.LT !== undefined ? feature.properties.LT : "-"}</li>
+                    <li>Relative Luftfechte (%) ${feature.properties.RH || "-"}</li>
+                    <li>Windgeschwindigkeit (km/h) ${feature.properties.WG || "-"}</li>
+                    <li>Schneehöhe (cm) ${feature.properties.HS || "-"}</li>
+                </ul>
+                <span>${pointInTime.toLocaleString()}</span>
+
+            `);
+        }
+    }).addTo(overlays.stations);
+    showTemperature(jsondata);
+};
+
+loadStations("https://static.avalanche.report/weather_stations/stations.geojson");
+
+function showTemperature(jsondata){
+    L.geoJSON(jsondata, {
+        filter: function(feature) {
+            if (feature.properties.LT > -50 && feature.properties < 50) {
+                return true;
+            }
+        },
+        pointToLayer: function(feature, latlng) {
+            return L.marker(latlng, {
+                icon: L.divIcon ({
                     className: "aws-div-icon",
                     html: `<span>${feature.properties.LT}</span>`
-                }),
-            })
-        },
-    }).addTo(overlays.temperature);
+
+                })
+            })            
+        }
+    }).addTo(overlays.temperatur);
 }
+
+
+
