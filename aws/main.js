@@ -15,6 +15,7 @@ let map = L.map("map").setView([ibk.lat, ibk.lng], ibk.zoom);
 // thematische Layer
 let overlays = {
     stations: L.featureGroup(),
+    wind: L.featureGroup().addTo(map),
     temperatur: L.featureGroup().addTo(map),
 
 }
@@ -31,6 +32,7 @@ L.control.layers({
 }, {
     "Wetterstationen": overlays.stations,
     "Temperatur": overlays.temperatur,
+    "Windgeschwindigkeit": overlays.wind,
 }).addTo(map);
 
 // Maßstab
@@ -71,6 +73,7 @@ async function loadStations(url) {
         }
     }).addTo(overlays.stations);
     showTemperature(jsondata);
+    showWind(jsondata);
 };
 
 loadStations("https://static.avalanche.report/weather_stations/stations.geojson");
@@ -87,12 +90,13 @@ function showTemperature(jsondata){
             return L.marker(latlng, {
                 icon: L.divIcon ({
                     className: "aws-div-icon",
-                    html: `<span style="background-color:${color}">${feature.properties.LT}</span>`
+                    html: `<span style="background-color:${color}">${feature.properties.LTtoFixed(1)}</span>`
                 }),
             })            
         },
     }).addTo(overlays.temperatur);
 }
+
 
 function getColor(value, ramp) {
     for (let rule of ramp) {
@@ -103,5 +107,36 @@ function getColor(value, ramp) {
     }
 } 
 
-let testColor = getColor(-3, COLORS.temperatureL);
-console.log("TestColor fuer temp -3" , testColor);
+
+
+//Wind
+
+function showWind(jsondata) {
+    L.geoJSON(jsondata, {
+        filter: function(feature) {
+            if (feature.properties.WG > 0 && feature.properties.WG < 100) {
+                return true;
+            }
+        },
+        pointToLayer: function(feature, latlng) {
+            let color = getColor(feature.properties.WG, COLORS.wind);
+            return L.marker(latlng, {
+                icon: L.divIcon ({
+                    className: "aws-div-icon",
+                    html: `<span style="background-color:${color}">${feature.properties.WG.toFixed(1)}</span>`
+                }),
+            })            
+        },
+    }).addTo(overlays.wind);
+}
+
+
+function getColor(value, ramp) {
+    for (let rule of ramp) {
+        console.log("rule", rule);
+        if (value >= rule.min && value < rule.max) {
+            return rule.color;
+        }
+    }
+} 
+
