@@ -13,6 +13,7 @@ let map = L.map("map").setView([ibk.lat, ibk.lng], ibk.zoom);
 // thematische Layer
 let overlays = {
     stations: L.featureGroup().addTo(map),
+    temperatur: L.featureGroup(),
 }
 
 // Layer control
@@ -26,6 +27,7 @@ L.control.layers({
     "Esri WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
 }, {
     "Wetterstationen": overlays.stations,
+    "Temperatur": overlays.temperatur,
 }).addTo(map);
 
 // Maßstab
@@ -46,11 +48,8 @@ async function loadStations(url) {
                         iconUrl: "icons/wifi.png",
                         iconAnchor: [16, 37],
                         popupAnchor: [0, -37]
-
-                    })
-
+                     })
                 });
-
             },
 
             onEachFeature: function(feature, layer) {
@@ -66,9 +65,21 @@ async function loadStations(url) {
                    </ul>
                    <span>${pointInTime.toLocaleString()}</span>
                 `);
-
             }
-
     }).addTo(overlays.stations);
+    showTemperature(jsondata); 
 }
 loadStations("https://static.avalanche.report/weather_stations/stations.geojson");
+
+function showTemperature(jsondata) {
+    L.geoJSON(jsondata, {
+        pointToLayer: function (feature, latlng) {
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    className: "aws-div-icon",
+                    html: `<span>${feature.properties.LT}</span>`
+                }),
+            })
+        },
+    }).addTo(overlays.temperature);
+}
