@@ -78,10 +78,11 @@ async function loadStations(url) {
 
 loadStations("https://static.avalanche.report/weather_stations/stations.geojson");
 
+//Temperatur
 function showTemperature(jsondata){
     L.geoJSON(jsondata, {
         filter: function(feature) {
-            if (feature.properties.LT > -50 && feature.properties < 50) {
+            if (feature.properties.LT > -50 && feature.properties.LT < 50) {
                 return true;
             }
         },
