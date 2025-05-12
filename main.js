@@ -12,12 +12,14 @@ let ibk = {
 // Karte initialisieren
 let map = L.map("map").setView([ibk.lat, ibk.lng], ibk.zoom);
 
+
 // thematische Layer
 let overlays = {
     stations: L.featureGroup(),
-    wind: L.featureGroup().addTo(map),
+    wind: L.featureGroup(),
     temperatur: L.featureGroup().addTo(map),
     snow: L.featureGroup().addTo(map),
+    direction: L.featureGroup().addTo(map),
 
 }
 
@@ -33,8 +35,8 @@ L.control.layers({
 }, {
     "Wetterstationen": overlays.stations,
     "Temperatur": overlays.temperatur,
-    "Windgeschwindigkeit": overlays.wind,
     "Schnee": overlays.snow,
+    "Windrichtung und Windgeschwindigkeit": overlays.direction,
 }).addTo(map);
 
 // Maßstab
@@ -75,28 +77,28 @@ async function loadStations(url) {
         }
     }).addTo(overlays.stations);
     showTemperature(jsondata);
-    showWind(jsondata);
     showSnow(jsondata);
+    showDirection(jsondata);
 };
 
 loadStations("https://static.avalanche.report/weather_stations/stations.geojson");
 
 //Temperatur
-function showTemperature(jsondata){
+function showTemperature(jsondata) {
     L.geoJSON(jsondata, {
-        filter: function(feature) {
+        filter: function (feature) {
             if (feature.properties.LT > -50 && feature.properties.LT < 50) {
                 return true;
             }
         },
-        pointToLayer: function(feature, latlng) {
+        pointToLayer: function (feature, latlng) {
             let color = getColor(feature.properties.LT, COLORS.temperature);
             return L.marker(latlng, {
-                icon: L.divIcon ({
+                icon: L.divIcon({
                     className: "aws-div-icon",
                     html: `<span style="background-color:${color}">${feature.properties.LT.toFixed(1)}</span>`
                 }),
-            })            
+            })
         },
     }).addTo(overlays.temperatur);
 }
@@ -109,47 +111,16 @@ function getColor(value, ramp) {
             return rule.color;
         }
     }
-} 
-
-//Wind
-
-function showWind(jsondata) {
-    L.geoJSON(jsondata, {
-        filter: function(feature) {
-            if (feature.properties.WG > 0 && feature.properties.WG < 100) {
-                return true;
-            }
-        },
-        pointToLayer: function(feature, latlng) {
-            let color = getColor(feature.properties.WG, COLORS.wind);
-            return L.marker(latlng, {
-                icon: L.divIcon ({
-                    className: "aws-div-icon",
-                    html: `<span style="background-color:${color}">${feature.properties.WG.toFixed(1)}</span>`
-                }),
-            })            
-        },
-    }).addTo(overlays.wind);
 }
-
-
-function getColor(value, ramp) {
-    for (let rule of ramp) {
-        console.log("rule", rule);
-        if (value >= rule.min && value < rule.max) {
-            return rule.color;
-        }
-    }
-} 
 
 //Snow
 
 function showSnow(jsondata) {
     L.geoJSON(jsondata, {
-        filter: function(feature) {
+        filter: function (feature) {
             return feature.properties.HS > 0 && feature.properties.HS < 1000;
         },
-        pointToLayer: function(feature, latlng) {
+        pointToLayer: function (feature, latlng) {
             let color = getColor(feature.properties.HS, COLORS.snow);
             return L.marker(latlng, {
                 icon: L.divIcon({
@@ -160,4 +131,36 @@ function showSnow(jsondata) {
         }
     }).addTo(overlays.snow);
 }
+
+//Windrichtung
+
+//Windrichtung in Himmelsrichtung umwandeln
+function degreesToCardinal(deg) {
+    const directions = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+    const index = Math.round(deg / 45) % 8;
+    return directions[index];
+}
+
+//Kombinierter Layer Wind und Windrichtung
+function showDirection(jsondata) {
+    L.geoJSON(jsondata, {
+        filter: function (feature) {
+            return feature.properties.WG >= 0 && feature.properties.WG < 200 &&
+                feature.properties.WR !== null;
+        },
+        pointToLayer: function (feature, latlng) {
+            const speed = feature.properties.WG;
+            const direction = degreesToCardinal(feature.properties.WR);
+            const color = getColor(speed, COLORS.wind) || "gray";
+
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    className: "aws-div-icon",
+                    html: `<span style="background-color:${color}">${direction}</span>`
+                })
+            });
+        }
+    }).addTo(overlays.direction);
+}
+
 
